@@ -31,11 +31,13 @@ const ADDITIONAL_RETRY_TIMES_COUNT = 3;
  *       им необходимо прописать соответствующее правило(Rule). Данный же параметр является глобальным для всех груп
  *       одновременно.
  */
-const EDUCATION_WEEKDAYS = array(false, true, false, false, false, false, false); // ???
+const EDUCATION_WEEKDAYS = array(false, true, false, false, false, false, false); // тут не поняла
+//$weekDaysFilter[$currentWeekDay] !== true берем дни которые false:????
 
-const NUM_OF_EVENTS_IN_PERIOD = 20; //пар в неделю - посчитать
-const NUM_OF_EVENTS_PER_DAY = 4; //пар в день
-const SCHEDULE_PERIOD_EDUCATION_DAYS_LENGTH = NUM_OF_EVENTS_IN_PERIOD / NUM_OF_EVENTS_PER_DAY;// ???
+const NUM_OF_EVENTS_IN_PERIOD = 20; //пар в неделю - посчитать из бд
+const NUM_OF_EVENTS_PER_DAY = 4; //пар в день посчитать из пар в неделю
+// к-во учебніх дней = тоже бд
+const SCHEDULE_PERIOD_EDUCATION_DAYS_LENGTH = NUM_OF_EVENTS_IN_PERIOD / NUM_OF_EVENTS_PER_DAY;
 
 //вызов соответствующих функций для разных обьектов rules
 //ruleIn - массив из restricts - обьект класса из правищ, entry - сборный оьект
@@ -43,7 +45,7 @@ function callRuleCalculations($ruleInstance, $entry) {
     //вызо метода обьекта унаследованного от абс клас
     $method = array($ruleInstance, 'calculate');
     $arguments = array($entry);
-    //вызов функции method - примером GroupDisciplineAvailable calculate()???
+    //вызов функции method - примером GroupDisciplineAvailable calculate() верно???
 	//передали сборный обьект
     $value = call_user_func_array($method, $arguments);
 //получили коефициент
@@ -60,7 +62,8 @@ function getClassRuleValues($rules, $entry) {
 
     $values = array();
     foreach ($rules as $rule) {
-        $value = callRuleCalculations($rule, $entry); //вызываем функцию для разных обьектов правил чтобы получить коефициенты
+	    //вызываем функцию для разных обьектов правил чтобы получить коефициенты
+        $value = callRuleCalculations($rule, $entry);
 
         if ($value === 0) {
             return 0;
@@ -101,26 +104,27 @@ function calculateLocalClassCoefficient($entry, $weight, $classes) {
     return Utils::applyWeightImpact($localClassCoefficient, $weight);
 }
 
-//TODO: разставить класи в порядке следоватльности от первого наиболее вероятного 0.
+//TODO: разставить класи в порядке следоватльности от первого наиболее вероятного 0 - дольше всего будет считать препода
 //высчитать коефициент групп - нам большой массив и сборный обьект (формаируется  в цикле)
 function calculateLocalGroupCoefficient($restricts, $entry) {
     $weight = PRIORITY_GROUP_WEIGHT; //приоритет определили сами
     $classes = array(
-        $restricts[INTERSECT_CLS_GROUP_TIME], //правила група время
-        $restricts[INTERSECT_CLS_GROUP_DISCIPLINE], //правило группа дисциплина
-        $restricts[INTERSECT_CLS_GROUP_LECTURER], //правило група препод
+	    $restricts[INTERSECT_CLS_GROUP_LECTURER], //правило група препод
+	    $restricts[INTERSECT_CLS_GROUP_DISCIPLINE], //правило группа дисциплина
+	    $restricts[INTERSECT_CLS_GROUP_TIME], //правила група время
     );
-
-    return calculateLocalClassCoefficient($entry, $weight, $classes); //получили коефициент с применением приоритета, правил, веса
+//получили коефициент с применением приоритета, правил, веса
+    return calculateLocalClassCoefficient($entry, $weight, $classes);
 }
 
-//коефдисц
+//коефициент локал
 function calculateLocalDisciplineCoefficient($restricts, $entry) {
     $weight = PRIORITY_DISCIPLINE_WEIGHT;
     $classes = array(
-        $restricts[INTERSECT_CLS_GROUP_DISCIPLINE],
         $restricts[INTERSECT_CLS_DISCIPLINE_TIME],
         $restricts[INTERSECT_CLS_DISCIPLINE_LECTURER],
+	    $restricts[INTERSECT_CLS_GROUP_DISCIPLINE],
+
     );
 
     return calculateLocalClassCoefficient($entry, $weight, $classes);
@@ -130,9 +134,10 @@ function calculateLocalDisciplineCoefficient($restricts, $entry) {
 function calculateLocalLecturerCoefficient($restricts, $entry) {
     $weight = PRIORITY_LECTURER_WEIGHT;
     $classes = array(
-        $restricts[INTERSECT_CLS_GROUP_LECTURER],
         $restricts[INTERSECT_CLS_LECTURER_TIME],
         $restricts[INTERSECT_CLS_DISCIPLINE_LECTURER],
+	    $restricts[INTERSECT_CLS_GROUP_LECTURER],
+
     );
 
     return calculateLocalClassCoefficient($entry, $weight, $classes);
@@ -148,13 +153,13 @@ function calculateBatchSize($numOfEvents, $minNumOfEvents) {
 }
 
 //это поиск конфликтов?
-function clsHasTimeIntersect($collection, ScheduleEntry $value) { //KeyValue, entry ???
+function clsHasTimeIntersect($collection, ScheduleEntry $value) {
     $time = $value->getTime(); //взял время из обьекта
     $lecturer = $value->getLecturer(); //взяли препода
     $group = $value->getGroup(); //взяли группу
-
-    foreach ($collection as $entry) { //идем по массиву?
-        if ($collection instanceof KeyValueMapStorage) { //эээ
+//почему  $entry = $entry[0];?
+    foreach ($collection as $entry) {
+        if ($collection instanceof KeyValueMapStorage) {
             $entry = $entry[0];
         }
 
@@ -167,7 +172,7 @@ function clsHasTimeIntersect($collection, ScheduleEntry $value) { //KeyValue, en
     return false;
 }
 
-//считаем коефициенты для большой формулы :) по правилам
+//считаем коефициенты для большой формулы  по правилам
 function calculateCoefficients($restricts, $time, $groups, $disciplines, $lecturers) {
     $coefficients = new KeyValueMapStorage(); //делаем обьект
 
@@ -192,7 +197,7 @@ function calculateCoefficients($restricts, $time, $groups, $disciplines, $lectur
                 }
 
                 $classesCoefficients = [$localGroupCoefficient, $localDisciplineCoefficient, $localLecturerCoefficient]; //все коеф. в массив
-                // In fact extra. When data from Rule.calculate corrected don`t needed..
+                // TODO: In fact extra. When data from Rule.calculate corrected don`t needed..
 	            //????
 	            // вернеет $classesCoef низменным
                 $classesCoefficients = Utils::normalizeCollection($classesCoefficients, 0, 1);
@@ -211,11 +216,11 @@ function calculateCoefficients($restricts, $time, $groups, $disciplines, $lectur
 function distributeEvents($eventsTimes, $restricts, $groups, $disciplines, $lecturers) {
     $distributedSchedule = new KeyValueMapStorage(); //обьект принимает два массива:?
     $scheduleMaxSize = count($eventsTimes); // размер массива с элементами типа Time
-    $batchSize = calculateBatchSize( // посчитали кол-во значений для итерации????
+    $batchSize = calculateBatchSize( // к-во итераций - по факту учебных дней?
         NUM_OF_EVENTS_IN_PERIOD,
         NUM_OF_EVENTS_PER_DAY
     );
-    $additionalRetryTimesCounter = ADDITIONAL_RETRY_TIMES_COUNT; //вот это кол-во попыток растановки??
+    $additionalRetryTimesCounter = ADDITIONAL_RETRY_TIMES_COUNT; //вот это кол-во попыток растановки - почему 3??
 
     while (count($eventsTimes) > 0 && $additionalRetryTimesCounter > 0) { //пары и попытки
         $availableToDistribute = count($eventsTimes);// сколько свободных
@@ -225,7 +230,7 @@ function distributeEvents($eventsTimes, $restricts, $groups, $disciplines, $lect
         foreach ($eventsTimes as $time) {//перебираем обьекты типа time в массиве
 	        //перебрали все варианты - получиили массив из обьектов сборных и коефициентов
             $coefficients = calculateCoefficients($restricts, $time, $groups, $disciplines, $lecturers);
-            //
+            //где то с этого момента до кнца функции чет не пойму
             $coefficients = $coefficients->topByValue($batchSize);  // перемешали все?
             $entriesToDistribute->extend($coefficients); //добавлили в массив
         }
@@ -254,7 +259,7 @@ function distributeEvents($eventsTimes, $restricts, $groups, $disciplines, $lect
         if ($availableToDistribute <= $currentDistributedCount) {
             $additionalRetryTimesCounter--;
         }
-//???????????????????
+
     }
 
     return $distributedSchedule;
@@ -262,14 +267,14 @@ function distributeEvents($eventsTimes, $restricts, $groups, $disciplines, $lect
 
 
 // TODO: Fixed time from DB with dynamic duration & break between them.
-//???
+//??? - todo имеешь ввиду у кого какая смена и тд из бд?
 //
 function buildEventsTimes(DateTime $startDate, $length, $weekDaysFilter, $numOfEventsPerDay) {
     $eventsTimes = array();
-    $numOfEventsPerDay = ceil($numOfEventsPerDay);//округлили в большую сторону полученное кол пар в день?
+    $numOfEventsPerDay = ceil($numOfEventsPerDay);//округлили в большую сторону полученное кол пар в день
     $nextDay = clone $startDate; //склонили дату начала составления расписания
 
-    while ($length > 0) { //пар в неделю / пар в день???
+    while ($length > 0) { //к-во дней
         $currentDay = clone $nextDay;//склонили снова дату начала
         $nextDay = (clone $currentDay)->modify('+1 day'); //следующий денm
         $currentWeekDay = $currentDay->format('w'); //день недели
@@ -283,12 +288,14 @@ function buildEventsTimes(DateTime $startDate, $length, $weekDaysFilter, $numOfE
             $eventsTimes[] = new Time($eventTime, 80);//записали в массив расписания пар - обьект типа time - начало пары и продолжительность
         }
 
-        $length--; //одну пару сделали, уменьшили кол?
+        $length--; //одну пару сделали, уменьшили кол
     }
 
     return $eventsTimes;
 }
 
+
+//начало
 //екземпляры обьектов правил
 $restricts = array(
     INTERSECT_CLS_GROUP_TIME => array(),//TODO:

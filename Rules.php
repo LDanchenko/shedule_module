@@ -13,7 +13,7 @@ class GroupDisciplineAvailable extends Rule { //група дисциплина
 
         return (float)$group->hasDiscipline($discipline);//ведут ли в этой группе дисциплину
 	    //true or false
-	    //почему 0 или 1 = - строго?
+
     }
 }
 

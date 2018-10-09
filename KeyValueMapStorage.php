@@ -6,18 +6,18 @@ class KeyValueMapStorage implements Countable, Iterator, ArrayAccess {
     private $storageValues;//и это масив
 
     public function __construct() {
-        $this->storageKeys = new SplObjectStorage();//типа ключи?
-        $this->storageValues = array();
+        $this->storageKeys = new SplObjectStorage();//сюда обьекты entry
+        $this->storageValues = array();// тут коефициенты верно?
     }
-//тут поняла но не поняла
+
     function append($keyObject, $value) {
         $value = (string)$value;
-        $this->storageKeys[$keyObject] = $value; //добавления в массив с ключами?
+        $this->storageKeys[$keyObject] = $value;
 
         if (!array_key_exists($value, $this->storageValues)) { //если нет ключа для  значения в массиве values
             $this->storageValues[$value] = array(); // добавлии его в values
         }
-        $this->storageValues[$value][] = $keyObject;//?
+        $this->storageValues[$value][] = $keyObject;
     }
 
     function remove($keyObject) {
@@ -26,14 +26,14 @@ class KeyValueMapStorage implements Countable, Iterator, ArrayAccess {
             throw new Exception('Data was not integrity.');
         }
 
-        if (($key = array_search($keyObject, $this->storageValues[$value])) !== false) { //array search - вернет ключ?
+        if (($key = array_search($keyObject, $this->storageValues[$value])) !== false) {
             unset($this->storageValues[$value][$key]); //удалит из масива
         }
     }
 
     function removeAllKeysByValue($value) {
         $value = (string)$value;
-        if (!array_key_exists($value, $this->storageValues)) {//?
+        if (!array_key_exists($value, $this->storageValues)) {
             return;
         }
 
@@ -59,7 +59,7 @@ class KeyValueMapStorage implements Countable, Iterator, ArrayAccess {
     }
 
     //n - итерации?
-
+//???
     public function topByValue($n, $randomize = false) {
         $result = new KeyValueMapStorage();
         $sortedValues = array_keys($this->storageValues);// получили значения коеф
@@ -78,7 +78,7 @@ class KeyValueMapStorage implements Countable, Iterator, ArrayAccess {
             }
 
             foreach ($keysObject as $keyObject) {
-                $result->append($keyObject, $value); // сделали новый массив из случайно обьекты и коефициенты?
+                $result->append($keyObject, $value); // сделали новый массив из случайно обьекты и коефициенты??
                 $resultSize++;
             }
 
@@ -91,7 +91,7 @@ class KeyValueMapStorage implements Countable, Iterator, ArrayAccess {
     public function extend(KeyValueMapStorage $storage) {
         foreach ($storage as $item) {
             list($key, $value) = $item; //делаем список из двух массивов
-            $this->append($key, $value);//добавили в масси?
+            $this->append($key, $value);//добавили в массив
         }
     }
 
